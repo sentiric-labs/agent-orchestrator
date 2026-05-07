@@ -37,3 +37,21 @@ export async function addComment(repo: string, issueNumber: number, body: string
 export async function updateIssueLabels(repo: string, issueNumber: number, labels: string[]) {
     await octokit.rest.issues.setLabels({ owner: ORG, repo, issue_number: issueNumber, labels });
 }
+
+/**
+ * Belirli bir repodaki etiketlenmiş analiz raporlarını getirir
+ */
+export async function getInsights(repo: string) {
+    try {
+        const response = await octokit.rest.issues.listForRepo({
+            owner: ORG,
+            repo: repo,
+            labels: "type: insight",
+            state: "all" // Hem açık hem kapalı raporları oku
+        });
+        return response.data;
+    } catch (error) {
+        console.error("❌ Insights okunamadı:", error);
+        return [];
+    }
+}
