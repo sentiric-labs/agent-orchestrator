@@ -65,7 +65,6 @@ export async function uploadAsset(repo: string, path: string, contentBase64: str
             message: message,
             content: contentBase64
         });
-        // Kaydedilen dosyanın linkini döndür
         return response.data.content?.html_url || ""; 
     } catch (error) {
         console.error("❌ Asset yükleme hatası:", error);
