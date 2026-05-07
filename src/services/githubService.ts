@@ -55,3 +55,20 @@ export async function getInsights(repo: string) {
         return [];
     }
 }
+
+export async function uploadAsset(repo: string, path: string, contentBase64: string, message: string): Promise<string> {
+    try {
+        const response = await octokit.rest.repos.createOrUpdateFileContents({
+            owner: ORG,
+            repo: repo,
+            path: path,
+            message: message,
+            content: contentBase64
+        });
+        // Kaydedilen dosyanın linkini döndür
+        return response.data.content?.html_url || ""; 
+    } catch (error) {
+        console.error("❌ Asset yükleme hatası:", error);
+        return "";
+    }
+}
