@@ -1,0 +1,30 @@
+name: 🧠 Otonom Ajan Orkestratörü
+
+on:
+  schedule:
+    # Her gün sabah saat 06:00'da çalışır (UTC saat dilimine göre 03:00)
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    # GitHub UI üzerinden "Run workflow" butonu ile manuel tetikleme imkanı sağlar
+
+jobs:
+  run-agents:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Repoyu Klonla
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Node.js Kurulumu
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 📦 Bağımlılıkları Yükle
+        run: npm install
+
+      - name: 🚀 Ajanları Uyandır ve Sistemi Çalıştır
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+        run: npx ts-node src/index.ts
