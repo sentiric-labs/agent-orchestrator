@@ -2,10 +2,8 @@ name: 🧠 Otonom Ajan Orkestratörü
 
 on:
   schedule:
-    # Her gün sabah saat 06:00'da çalışır (UTC saat dilimine göre 03:00)
     - cron: '0 3 * * *'
   workflow_dispatch:
-    # GitHub UI üzerinden "Run workflow" butonu ile manuel tetikleme imkanı sağlar
 
 jobs:
   run-agents:
@@ -27,4 +25,5 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: npx ts-node src/index.ts
