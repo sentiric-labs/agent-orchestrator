@@ -7,7 +7,6 @@ const hf = new HfInference(process.env.HF_TOKEN);
 export async function generateBRoll(prompt: string): Promise<Buffer | null> {
     try {
         console.log(`🎨 [HuggingFace] Görsel üretiliyor: "${prompt}"`);
-        // Dünyanın en iyi açık kaynak görsel modellerinden biri: Stable Diffusion XL
         const blob = await hf.textToImage({
             model: "stabilityai/stable-diffusion-xl-base-1.0",
             inputs: prompt,
