@@ -71,3 +71,7 @@ export async function uploadAsset(repo: string, path: string, contentBase64: str
         return "";
     }
 }
+
+export async function closeIssue(repo: string, issueNumber: number) {
+    await octokit.rest.issues.update({ owner: ORG, repo, issue_number: issueNumber, state: "closed" });
+}
