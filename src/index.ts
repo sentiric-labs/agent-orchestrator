@@ -1,6 +1,6 @@
 import { 
     getSpec, createIssue, getOpenIssues, addComment, 
-    updateIssueLabels, getInsights, uploadAsset 
+    updateIssueLabels, getInsights, uploadAsset, closeIssue 
 } from "./services/githubService";
 import { generateContent } from "./services/aiService";
 import { generateBRoll } from "./services/huggingfaceService";
@@ -16,6 +16,7 @@ async function runSystem() {
 
         const issues = await getOpenIssues("content-engine");
 
+        // AÇIK ISSUE YOKSA YENİ PROJE BAŞLATIR
         if (issues.length === 0) {
             console.log("🔍[DATA AGENT] Yeni proje başlatılıyor...");
             const dataSpec = await getSpec("Spec-01_Intelligence_and_Data.md");
@@ -28,7 +29,7 @@ async function runSystem() {
         const labels = currentIssue.labels.map(l => typeof l === 'string' ? l : l.name || "");
         const issueNumber = currentIssue.number;
 
-        console.log(`📌 [İŞLENİYOR] Proje #${issueNumber}`);
+        console.log(`📌[İŞLENİYOR] Proje #${issueNumber}`);
 
         if (labels.includes("status: backlog") || labels.includes("status: conceptualization")) {
             console.log("🎨 [VISUAL AGENT] Ambalaj tasarımı hazırlanıyor...");
@@ -46,7 +47,6 @@ async function runSystem() {
             await updateIssueLabels("content-engine", issueNumber,["status: production", "agent: script-writer"]);
         }
         
-        // 🔥 YENİ EKLENEN AI PRODUCTION OPERATOR (HUGGINGFACE) 🔥
         else if (labels.includes("status: production")) {
             console.log("⚙️[PRODUCTION AGENT] AI Kurgu Başlıyor...");
             
@@ -59,9 +59,9 @@ async function runSystem() {
                 const fileName = `images/WL-${issueNumber}-${Date.now()}.png`;
                 const assetUrl = await uploadAsset("wiliam-louis-assets", fileName, imageBuffer.toString("base64"), `Upload B-Roll for Project #${issueNumber}`);
                 
-                const report = `### 🎬 OTONOM ÜRETİM TAMAMLANDI\n\n**HuggingFace AI** kullanılarak görsel üretildi ve repoya kaydedildi.\n\n* **Prompt:** \`${sdPrompt}\`\n* **Varlık Linki:** [Görseli İncele](${assetUrl})\n\nSistem QA aşamasına gönderiliyor.`;
+                const report = `### 🎬 OTONOM ÜRETİM TAMAMLANDI\n\n**AI Motoru** kullanılarak görsel üretildi ve repoya kaydedildi.\n\n* **Prompt:** \`${sdPrompt}\`\n* **Varlık Linki:** [Görseli İncele](${assetUrl})\n\nSistem QA aşamasına gönderiliyor.`;
                 await addComment("content-engine", issueNumber, report);
-                await updateIssueLabels("content-engine", issueNumber, ["status: review", "agent: audit"]);
+                await updateIssueLabels("content-engine", issueNumber,["status: review", "agent: audit"]);
                 console.log("✅ [PRODUCTION] Asset üretildi.");
             } else {
                 console.log("🚨[PRODUCTION] Asset üretilemedi.");
@@ -75,7 +75,19 @@ async function runSystem() {
             await addComment("content-engine", issueNumber, `### ⚖️ QA ONAY RAPORU\n\n${response}`);
             
             const isApproved = response.toUpperCase().includes("ONAYLANDI");
-            await updateIssueLabels("content-engine", issueNumber, isApproved ? ["status: ready-to-publish", "agent: audit"] :["status: revision-needed", "agent: audit"]);
+            await updateIssueLabels("content-engine", issueNumber, isApproved ?["status: ready-to-publish", "agent: audit"] :["status: revision-needed", "agent: audit"]);
+        }
+
+        // 🔥 YENİ EKLENEN OTOMATİK KAPATMA AŞAMASI 🔥
+        else if (labels.includes("status: ready-to-publish")) {
+            console.log("📦[ASSEMBLY AGENT] Proje başarıyla bitirildi, dosya kapatılıyor...");
+            
+            await addComment("content-engine", issueNumber, `### 🏁 OTONOM DÖNGÜ TAMAMLANDI\n\nProje sistem tarafından arşive kaldırılmıştır (Closed). \n\nYarınki döngüde sistem açık Issue bulamayacağı için yepyeni bir fikirle **WL-003** projesini başlatacaktır. Fabrika bandı dönmeye devam ediyor! 🚀`);
+            
+            // Github Issue'yu "Closed" yapar
+            await closeIssue("content-engine", issueNumber);
+            
+            console.log("✅ Proje kapatıldı! Yarın yepyeni bir video fikriyle görüşmek üzere.");
         }
 
     } catch (error) {
