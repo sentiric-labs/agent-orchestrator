@@ -23,8 +23,6 @@ export async function createIssue(repo: string, title: string, body: string, lab
     return response.data.html_url;
 }
 
-// YENİ EKLENEN YETENEKLER AŞAĞIDADIR:
-
 export async function getOpenIssues(repo: string) {
     const response = await octokit.rest.issues.listForRepo({ owner: ORG, repo, state: "open" });
     return response.data;
@@ -38,16 +36,13 @@ export async function updateIssueLabels(repo: string, issueNumber: number, label
     await octokit.rest.issues.setLabels({ owner: ORG, repo, issue_number: issueNumber, labels });
 }
 
-/**
- * Belirli bir repodaki etiketlenmiş analiz raporlarını getirir
- */
 export async function getInsights(repo: string) {
     try {
         const response = await octokit.rest.issues.listForRepo({
             owner: ORG,
             repo: repo,
             labels: "type: insight",
-            state: "all" // Hem açık hem kapalı raporları oku
+            state: "all" 
         });
         return response.data;
     } catch (error) {
@@ -72,6 +67,7 @@ export async function uploadAsset(repo: string, path: string, contentBase64: str
     }
 }
 
+// 🔥 YENİ EKLENEN: OTOMATİK DOSYA KAPATMA YETKİSİ 🔥
 export async function closeIssue(repo: string, issueNumber: number) {
     await octokit.rest.issues.update({ owner: ORG, repo, issue_number: issueNumber, state: "closed" });
 }
