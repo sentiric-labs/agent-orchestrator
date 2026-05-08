@@ -3,14 +3,12 @@ dotenv.config();
 
 export async function generateBRoll(prompt: string): Promise<Buffer | null> {
     try {
-        console.log(`🎨 [HuggingFace] Görsel üretiliyor (Native Fetch motoru devrede)...`);
-        console.log(`📝 Prompt: "${prompt}"`);
+        console.log(`🎨 [HuggingFace] Görsel üretiliyor (Native Fetch + SDXL devrede)...`);
         
-        // SDXL yerine lisans onayı istemeyen, daha hızlı v1.5 modelini kullanıyoruz
-        const MODEL_ID = "runwayml/stable-diffusion-v1-5"; 
+        // SENİN BULDUĞUN MODEL: Şu an dünyadaki en iyi açık kaynak görsel modeli
+        const MODEL_ID = "stabilityai/stable-diffusion-xl-base-1.0"; 
         const url = `https://api-inference.huggingface.co/models/${MODEL_ID}`;
         
-        // İsteği atan fonksiyonumuz
         const makeRequest = async () => {
             return await fetch(url, {
                 method: "POST",
@@ -20,18 +18,25 @@ export async function generateBRoll(prompt: string): Promise<Buffer | null> {
                 },
                 body: JSON.stringify({
                     inputs: prompt,
-                    parameters: { negative_prompt: "blurry, text, watermark, low quality" }
+                    parameters: { 
+                        negative_prompt: "blurry, text, watermark, low quality" 
+                    },
+                    // 🔥 KRİTİK NOKTA: Model uyuyorsa hata verme, uyanmasını bekle
+                    options: { 
+                        wait_for_model: true,
+                        use_cache: false 
+                    }
                 })
             });
         };
 
         let response = await makeRequest();
 
-        // 503 Hatası: Model uyuyorsa (Cold Start) Hugging Face tahmini uyanma süresini söyler
+        // 503 Hatası: Hugging Face "Model uyuyor, lütfen X saniye bekle" der
         if (response.status === 503) {
             const errorData = await response.json();
-            const waitTime = Math.ceil(errorData.estimated_time || 30);
-            console.log(`⏳ [HuggingFace] Model uyuyor. Uyanması için ${waitTime} saniye bekleniyor...`);
+            const waitTime = Math.ceil(errorData.estimated_time || 45); // Tahmini süreyi al
+            console.log(`⏳ [HuggingFace] Dev model uyuyor. Uyanması için ${waitTime} saniye bekleniyor...`);
             
             // Sistemi belirtilen saniye kadar duraklat
             await new Promise(resolve => setTimeout(resolve, waitTime * 1000));
@@ -40,7 +45,7 @@ export async function generateBRoll(prompt: string): Promise<Buffer | null> {
             response = await makeRequest(); // İkinci deneme
         }
 
-        // Eğer hala hata varsa, kapalı kutu değil GERÇEK hatayı ekrana bas
+        // Hala hata varsa (Örn: kota dolduysa) gizleme, doğrudan ekrana bas
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`🚨 HTTP Hatası: ${response.status} ${response.statusText}`);
@@ -48,6 +53,8 @@ export async function generateBRoll(prompt: string): Promise<Buffer | null> {
             return null;
         }
 
+        console.log("✅ [HuggingFace] Görsel başarıyla üretildi!");
+        
         // Başarılıysa görseli Buffer olarak döndür
         const arrayBuffer = await response.arrayBuffer();
         return Buffer.from(arrayBuffer);
