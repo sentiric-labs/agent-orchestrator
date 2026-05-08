@@ -1,40 +1,59 @@
-import { HfInference } from "@huggingface/inference";
 import * as dotenv from "dotenv";
 dotenv.config();
 
-const hf = new HfInference(process.env.HF_TOKEN);
-
 export async function generateBRoll(prompt: string): Promise<Buffer | null> {
     try {
-        console.log(`🎨[HuggingFace] Görsel üretiliyor (Bu işlem modelin uyanması için 1-2 dakika sürebilir)...`);
+        console.log(`🎨 [HuggingFace] Görsel üretiliyor (Native Fetch motoru devrede)...`);
         console.log(`📝 Prompt: "${prompt}"`);
         
-        const blob = await hf.textToImage(
-            {
-                // SDXL çok büyük bir modeldir. Beklemek istemezseniz burayı: "runwayml/stable-diffusion-v1-5" yapabilirsiniz.
-                model: "stabilityai/stable-diffusion-xl-base-1.0",
-                inputs: prompt,
-                parameters: { negative_prompt: "blurry, text, watermark, low quality" }
-            },
-            {
-                // 🔥 İŞTE HAYAT KURTARAN AYARLAR BURADA 🔥
-                wait_for_model: true, // Model uyuyorsa (Cold Start), uyanana kadar bekle.
-                use_cache: false      // Hep aynı resmi üretmemesi için cache'i kapat.
-            }
-        );
+        // SDXL yerine lisans onayı istemeyen, daha hızlı v1.5 modelini kullanıyoruz
+        const MODEL_ID = "runwayml/stable-diffusion-v1-5"; 
+        const url = `https://api-inference.huggingface.co/models/${MODEL_ID}`;
         
-        const arrayBuffer = await blob.arrayBuffer();
+        // İsteği atan fonksiyonumuz
+        const makeRequest = async () => {
+            return await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${process.env.HF_TOKEN}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    inputs: prompt,
+                    parameters: { negative_prompt: "blurry, text, watermark, low quality" }
+                })
+            });
+        };
+
+        let response = await makeRequest();
+
+        // 503 Hatası: Model uyuyorsa (Cold Start) Hugging Face tahmini uyanma süresini söyler
+        if (response.status === 503) {
+            const errorData = await response.json();
+            const waitTime = Math.ceil(errorData.estimated_time || 30);
+            console.log(`⏳ [HuggingFace] Model uyuyor. Uyanması için ${waitTime} saniye bekleniyor...`);
+            
+            // Sistemi belirtilen saniye kadar duraklat
+            await new Promise(resolve => setTimeout(resolve, waitTime * 1000));
+            
+            console.log("🔄 [HuggingFace] Model uyandı, istek tekrarlanıyor...");
+            response = await makeRequest(); // İkinci deneme
+        }
+
+        // Eğer hala hata varsa, kapalı kutu değil GERÇEK hatayı ekrana bas
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`🚨 HTTP Hatası: ${response.status} ${response.statusText}`);
+            console.error(`🚨 HF Yanıt Detayı: ${errorText}`);
+            return null;
+        }
+
+        // Başarılıysa görseli Buffer olarak döndür
+        const arrayBuffer = await response.arrayBuffer();
         return Buffer.from(arrayBuffer);
         
     } catch (error: any) {
-        console.error("❌ [HuggingFace] Görsel üretilemedi.");
-        
-        // Hatayı sessizce yutmak yerine gerçek sebebini ekrana yazdırıyoruz
-        if (error.response) {
-            console.error("🚨 API Yanıt Hatası:", error.response.status, error.response.statusText);
-        } else {
-            console.error("🚨 Sistem Hatası:", error.message || error);
-        }
+        console.error("❌ [HuggingFace] Kritik Sistem Hatası:", error.message || error);
         return null;
     }
 }
